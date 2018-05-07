@@ -1,7 +1,10 @@
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.*;
+
 
 public class IMDBQueries {
 
@@ -32,6 +35,21 @@ public class IMDBQueries {
                 && second.equals(((Tuple<?, ?>) obj).second);
         }
     }
+    
+    private static double convertToDouble(String temp){
+    	String Value = temp;
+    	Value = Value.replaceAll(",", "").trim();
+    	Value = Value.replaceAll(" ", "");
+    	
+    	return Double.parseDouble(Value);
+    }
+    
+    private static long convertToLong(String temp){
+    	String Value = temp;
+    	Value = Value.replaceAll("[^\\d.]", "");
+    	
+    	return Long.parseLong(Value);
+    }
 
     /**
      * All-rounder: Determine all movies in which the director stars as an actor
@@ -41,8 +59,35 @@ public class IMDBQueries {
      * @return top ten movies and the director, sorted by decreasing IMDB rating
      */
     protected List<Tuple<Movie, String>> queryAllRounder(List<Movie> movies) {
-        // TODO Basic Query: insert code here
-        return new ArrayList<>();
+    	Movie movie;
+    	List<Tuple<Movie,String>> topten = new ArrayList<Tuple<Movie,String>>();
+    	for(int i = 0; i<movies.size(); i++){
+    		movie = movies.get(i);
+    		outerloop:
+    		for(int j = 0; j < movie.getCastList().size(); j++){
+    			for(int k =0; k < movie.getDirectorList().size(); k++){
+    				if((movie.getDirectorList().get(k).equals(movie.getCastList().get(j)))){
+    					Tuple<Movie,String> tempmovie = new Tuple<Movie,String>(movie,""); 	
+    					if(topten.isEmpty()){							
+    						topten.add(tempmovie);
+    					}else{
+    						for(int l = 0; l < topten.size(); l++){
+    							if(convertToDouble(tempmovie.first.getRatingValue()) > convertToDouble(topten.get(l).first.getRatingValue())){
+    								topten.add(l, tempmovie);    	
+    								if(l+1 > topten.size()){ topten.add(tempmovie);}
+    								if(topten.size() >= 10){
+    									topten.subList(10, topten.size()).clear();;
+    								}
+    								break;
+    							}
+    						}
+    					}
+    					break outerloop;
+    				}
+    			}
+    		}
+    	}
+        return topten;
     }
 
     /**
@@ -57,7 +102,34 @@ public class IMDBQueries {
      */
     protected List<Tuple<Movie, Long>> queryUnderTheRadar(List<Movie> movies) {
         // TODO Basic Query: insert code here
-        return new ArrayList<>();
+    	Movie movie;
+    	List<Tuple<Movie,Long>> topten = new ArrayList<Tuple<Movie,Long>>();
+    	for(int i = 0; i<movies.size(); i++){
+    		movie = movies.get(i);
+    		if(convertToDouble(movie.getRatingValue()) >= (double)8.0){
+    			if(convertToDouble(movie.getRatingCount()) >= (double)1000){
+    				if(!movie.getGross().equals("0") || !movie.getBudget().equals("0")){
+    					long loss = (convertToLong(movie.getGross())- convertToLong(movie.getBudget()));
+    					Tuple<Movie,Long> tempmovie = new Tuple<Movie,Long>(movie,loss); 	
+    					if(topten.isEmpty()){							
+						topten.add(tempmovie);
+    					}else{
+    						for(int l = 0; l < topten.size(); l++){
+    							if(tempmovie.second < topten.get(l).second){
+    								topten.add(l, tempmovie);    	
+    								if(l+1 > topten.size()){ topten.add(tempmovie);}
+    								if(topten.size() >= 10){
+    									topten.subList(10, topten.size()).clear();;
+    								}
+    								break;
+    							}
+    						}
+						}
+					}
+    			}
+    		}
+    	}
+        return topten;
     }
 
     /**
@@ -88,7 +160,28 @@ public class IMDBQueries {
      */
     protected List<Movie> queryRedPlanet(List<Movie> movies) {
         // TODO Basic Query: insert code here
-        return new ArrayList<>();
+    	Movie movie;
+    	List<Movie> movielist = new ArrayList<Movie>();
+    	for(int i = 0; i<movies.size(); i++){
+    		movie = movies.get(i);
+    		for(int j=0; j < movie.getGenreList().size(); j++){
+    			if(movie.getGenreList().get(j).contains("Sci-Fi")){
+    				if(movie.getDescription().contains("Mars")){
+    					if(movielist.isEmpty()){
+    						movielist.add(movie);
+    					}else{
+    						for(int k=0; k<movielist.size();k++){
+    							if(convertToLong(movie.getYear())<convertToLong(movielist.get(k).getYear())){
+    								movielist.add(k, movie);
+    								break;
+    							}
+    						}
+    					}
+    				}
+    			}
+    		}
+    	}
+        return movielist;
     }
 
     /**
@@ -129,7 +222,34 @@ public class IMDBQueries {
      */
     protected List<Tuple<String, Integer>> queryWorkHorse(List<Movie> movies) {
         // TODO Impossibly Hard Query: insert code here
-        return new ArrayList<>();
+    	Movie movie;
+    	List<Tuple<String,Integer>> topten = new ArrayList<Tuple<String,Integer>>();
+    	boolean inserted = false;
+    	for(int i = 0; i<movies.size(); i++){
+    		movie = movies.get(i);
+    		for(int j=0; j<movie.getCastList().size(); j++){
+    			for(int k=0; k<topten.size();k++){
+    				if(movie.getCastList().get(j).equals(topten.get(k).first)){
+    					topten.get(k).second++;
+    					int copy_k = k-1;
+    					while(copy_k > 0 && topten.get(k).second > topten.get(copy_k).second)	{copy_k--;}
+    					if(copy_k == 0){
+    						topten.add(0, topten.get(k));
+    						topten.remove(k+1);
+    					}else{
+    						Collections.swap(topten, copy_k+1, k);
+    					}
+    					inserted = true;
+    				}
+    			}
+    			if(inserted == false){
+    				Tuple<String,Integer> tempactor = new Tuple<String,Integer>(movie.getCastList().get(j),1);
+    				topten.add(tempactor);
+    			}
+    		}
+    	}
+    	topten.subList(10, topten.size()).clear();
+        return topten;
     }
 
     /**
@@ -142,7 +262,25 @@ public class IMDBQueries {
      */
     protected List<Movie> queryMustSee(List<Movie> movies) {
         // TODO Impossibly Hard Query: insert code here
-        return new ArrayList<>();
+    	Movie movie;
+    	Movie[] mustsee = new Movie[21];
+    	for(int i = 0; i<movies.size(); i++){
+    		movie = movies.get(i);
+    		int index = (int)convertToLong(movie.getYear()) - 1990;
+    		if(index >= 0 && index < 21){
+    			if((int)convertToLong(movie.getRatingCount())> 10000){
+    				if(mustsee[index] == null){
+    					mustsee[index] = movie;
+    				}else{
+    					if(convertToDouble(movie.getRatingValue()) > convertToDouble(mustsee[index].getRatingValue())){
+    						mustsee[index] = movie;
+    					}
+    				}
+    			}
+    		}
+    	}
+    	
+        return Arrays.asList(mustsee);
     }
 
     /**
@@ -155,7 +293,25 @@ public class IMDBQueries {
      */
     protected List<Movie> queryRottenTomatoes(List<Movie> movies) {
         // TODO Impossibly Hard Query: insert code here
-        return new ArrayList<>();
+    	Movie movie;
+    	Movie[] rotton = new Movie[21];
+    	for(int i = 0; i<movies.size(); i++){
+    		movie = movies.get(i);    		
+    		int index = (int)convertToLong(movie.getYear()) - 1990;
+    		if(index >= 0 && index < 21){
+    			if(convertToDouble(movie.getRatingValue())> 0){
+    				if(rotton[index] == null){
+    					rotton[index] = movie;
+    				}else{
+    					if(convertToDouble(movie.getRatingValue()) < convertToDouble(rotton[index].getRatingValue())){
+    						rotton[index] = movie;
+    					}
+    				}
+    			}
+    		}
+    	}
+    	
+        return Arrays.asList(rotton);
     }
 
     /**
@@ -176,6 +332,8 @@ public class IMDBQueries {
 
     public static void main(String[] argv) throws IOException {
         String moviesPath = "./data/movies/";
+        
+        //String temptest = "True Lies - Wahre L&uuml;gen";
 
         if (argv.length == 1) {
             moviesPath = argv[0];
@@ -183,9 +341,9 @@ public class IMDBQueries {
             System.out.println("Call with: IMDBQueries.jar <moviesPath>");
             System.exit(0);
         }
-
         MovieReader movieReader = new MovieReader();
         List<Movie> movies = movieReader.readMoviesFrom(Paths.get(moviesPath));
+        //System.out.println(movies.get().getTitle());
  
 
         System.out.println("All-rounder");
